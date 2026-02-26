@@ -1,6 +1,6 @@
 import { pgTable, uuid, varchar, timestamp, integer } from 'drizzle-orm/pg-core';
 
-export const events = pgTable('imajin_ai_karaoke_events', {
+export const events = pgTable('events', {
   id: uuid('id').primaryKey().defaultRandom(),
   slug: varchar('slug', { length: 255 }).unique().notNull(),
   name: varchar('name', { length: 255 }).notNull(),
@@ -10,7 +10,7 @@ export const events = pgTable('imajin_ai_karaoke_events', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
-export const participants = pgTable('imajin_ai_karaoke_participants', {
+export const participants = pgTable('participants', {
   id: uuid('id').primaryKey().defaultRandom(),
   eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
   name: varchar('name', { length: 255 }).notNull(),
