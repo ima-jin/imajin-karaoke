@@ -7,26 +7,29 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: /home/jin/dev/imajin-karaoke
     env:
       PATH: /home/jin/.nvm/versions/node/v22.22.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
     steps:
       - name: Pull latest
         run: |
+          cd /home/jin/dev/imajin-karaoke
           git fetch origin main
           git reset --hard origin/main
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: |
+          cd /home/jin/dev/imajin-ai
+          pnpm install --no-frozen-lockfile
 
       - name: Build
-        run: npm run build
+        run: |
+          cd /home/jin/dev/imajin-karaoke
+          npm run build
 
       - name: Push schema
         run: |
+          cd /home/jin/dev/imajin-karaoke
           DATABASE_URL=$(grep DATABASE_URL .env.local | cut -d'"' -f2) npx drizzle-kit push --force 2>&1 | tail -2
 
       - name: Restart
