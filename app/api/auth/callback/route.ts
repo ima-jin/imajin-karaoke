@@ -3,9 +3,10 @@ import { createSessionToken, sessionCookieOptions } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   const attestationId = req.nextUrl.searchParams.get('attestation_id');
+  const userDid = req.nextUrl.searchParams.get('user_did');
 
-  if (!attestationId) {
-    return NextResponse.redirect(new URL('/?auth_error=missing_attestation', req.url));
+  if (!attestationId || !userDid) {
+    return NextResponse.redirect(new URL('/?auth_error=missing_params', req.url));
   }
 
   const authUrl = process.env.IMAJIN_AUTH_URL;
@@ -15,11 +16,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/?auth_error=misconfigured', req.url));
   }
 
-  // The profile endpoint requires knowing the DID — first resolve via attestation
-  // The attestation_id IS the user DID reference in the delegated session flow.
-  // We fetch the profile using the app's DID + attestation as authorization.
-  // The attestation_id encodes or maps to the user's DID — we pass it directly
-  // and the profile API resolves it.
   let profileData: {
     did: string;
     displayName?: string;
@@ -28,10 +24,9 @@ export async function GET(req: NextRequest) {
   };
 
   try {
-    // Resolve attestation → user profile
-    // The attestation_id is used as both the user identifier and authorization token
+    // Fetch user profile using app credentials
     const profileRes = await fetch(
-      `${authUrl}/profile/api/profile/${attestationId}`,
+      `${authUrl}/profile/api/profile/${encodeURIComponent(userDid)}`,
       {
         headers: {
           'X-App-DID': appDid,
