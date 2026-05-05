@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ParticipantRow } from '@/components/ParticipantRow';
 import { SignupForm } from '@/components/SignupForm';
 import type { Event, Participant } from '@/db';
+import type { SessionUser } from '@/lib/auth';
 
 interface EventWithParticipants extends Event {
   participants: Participant[];
@@ -17,6 +18,7 @@ export default function EventPage() {
   const [event, setEvent] = useState<EventWithParticipants | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   const formRef = useRef<HTMLFormElement>(null!);
 
   const fetchEvent = useCallback(async () => {
@@ -42,6 +44,13 @@ export default function EventPage() {
     const interval = setInterval(fetchEvent, 3000);
     return () => clearInterval(interval);
   }, [fetchEvent]);
+
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then((r) => r.json())
+      .then((data) => setSessionUser(data))
+      .catch(() => {});
+  }, []);
 
   const scrollToSignup = () => {
     formRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -129,7 +138,12 @@ export default function EventPage() {
 
       {/* Signup form at bottom */}
       <div className="sticky bottom-0 max-w-2xl mx-auto w-full">
-        <SignupForm eventSlug={slug} onSignup={fetchEvent} formRef={formRef} />
+        <SignupForm
+          eventSlug={slug}
+          onSignup={fetchEvent}
+          formRef={formRef}
+          defaultName={sessionUser?.displayName}
+        />
       </div>
     </main>
   );

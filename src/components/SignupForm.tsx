@@ -6,10 +6,11 @@ interface SignupFormProps {
   eventSlug: string;
   onSignup: () => void;
   formRef?: React.RefObject<HTMLFormElement>;
+  defaultName?: string;
 }
 
-export function SignupForm({ eventSlug, onSignup, formRef }: SignupFormProps) {
-  const [name, setName] = useState('');
+export function SignupForm({ eventSlug, onSignup, formRef, defaultName }: SignupFormProps) {
+  const [name, setName] = useState(defaultName ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
