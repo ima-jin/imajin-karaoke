@@ -4,24 +4,25 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ParticipantRow } from '@/components/ParticipantRow';
-import { EventForm } from '@/components/EventForm';
-import type { Event, Participant } from '@/db';
+import type { Participant } from '@/db';
+import type { ImajinEvent } from '@/lib/imajin';
 
-interface EventWithParticipants extends Event {
+interface EventWithParticipants extends ImajinEvent {
   participants: Participant[];
 }
 
 export default function AdminPage() {
   const params = useParams();
-  const slug = params.slug as string;
+  const eventId = params.eventId as string;
   const [event, setEvent] = useState<EventWithParticipants | null>(null);
+  const [signupMode, setSignupMode] = useState<'anyone' | 'attendees_only'>('anyone');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showEditForm, setShowEditForm] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
 
   const fetchEvent = useCallback(async () => {
     try {
-      const res = await fetch(`/api/events/${slug}`);
+      const res = await fetch(`/api/events/${eventId}`);
       if (res.ok) {
         const data = await res.json();
         setEvent(data);
@@ -34,18 +35,31 @@ export default function AdminPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [slug]);
+  }, [eventId]);
+
+  const fetchConfig = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/events/${eventId}/config`);
+      if (res.ok) {
+        const data = await res.json();
+        setSignupMode(data.signupMode);
+      }
+    } catch (err) {
+      console.error('Failed to fetch config:', err);
+    }
+  }, [eventId]);
 
   useEffect(() => {
     fetchEvent();
+    fetchConfig();
     // Poll for updates every 3 seconds
     const interval = setInterval(fetchEvent, 3000);
     return () => clearInterval(interval);
-  }, [fetchEvent]);
+  }, [fetchEvent, fetchConfig]);
 
   const handleStatusChange = async (participantId: string, status: string) => {
     try {
-      const res = await fetch(`/api/events/${slug}/participants/${participantId}`, {
+      const res = await fetch(`/api/events/${eventId}/participants/${participantId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -57,27 +71,6 @@ export default function AdminPage() {
     } catch (err) {
       console.error('Failed to update participant:', err);
     }
-  };
-
-  const handleEditEvent = async (data: {
-    name: string;
-    location?: string;
-    startTime: string;
-    endTime?: string;
-  }) => {
-    const res = await fetch(`/api/events/${slug}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || 'Failed to update event');
-    }
-
-    setShowEditForm(false);
-    fetchEvent();
   };
 
   if (isLoading) {
@@ -113,40 +106,49 @@ export default function AdminPage() {
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <Link href={`/${slug}`} className="text-gray-400 hover:text-white">
+              <Link href={`/${eventId}`} className="text-gray-400 hover:text-white">
                 ←
               </Link>
-              <h1 className="text-xl font-bold">🎤 {event.name}</h1>
+              <h1 className="text-xl font-bold">🎤 {event.title}</h1>
               <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs rounded">
                 ADMIN
               </span>
+              {signupMode === 'attendees_only' && (
+                <span className="px-2 py-1 bg-orange-500 text-white text-xs rounded font-semibold">
+                  ATTENDEES ONLY
+                </span>
+              )}
             </div>
             <button
-              onClick={() => setShowEditForm(true)}
-              className="px-3 py-1 bg-gray-700 text-white text-sm rounded hover:bg-gray-600 transition-colors"
+              onClick={async () => {
+                setIsToggling(true);
+                const newMode = signupMode === 'anyone' ? 'attendees_only' : 'anyone';
+                try {
+                  const res = await fetch(`/api/events/${eventId}/config`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ signupMode: newMode }),
+                  });
+                  if (res.ok) {
+                    setSignupMode(newMode);
+                  }
+                } catch (err) {
+                  console.error('Failed to update config:', err);
+                } finally {
+                  setIsToggling(false);
+                }
+              }}
+              disabled={isToggling}
+              className="px-3 py-1.5 text-sm bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors disabled:opacity-50"
             >
-              Edit Event
+              {isToggling ? '...' : signupMode === 'anyone' ? 'Mode: Anyone' : 'Mode: Attendees Only'}
             </button>
           </div>
-          {event.location && (
-            <p className="text-gray-400 text-sm ml-8">📍 {event.location}</p>
+          {event.venue && (
+            <p className="text-gray-400 text-sm ml-8">📍 {event.venue}</p>
           )}
         </div>
       </header>
-
-      {/* Edit form modal */}
-      {showEditForm && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-4">Edit Event</h2>
-            <EventForm
-              event={event}
-              onSubmit={handleEditEvent}
-              onCancel={() => setShowEditForm(false)}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Queue with controls */}
       <div className="max-w-2xl mx-auto">

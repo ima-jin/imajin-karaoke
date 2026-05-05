@@ -5,17 +5,19 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ParticipantRow } from '@/components/ParticipantRow';
 import { SignupForm } from '@/components/SignupForm';
-import type { Event, Participant } from '@/db';
+import type { Participant } from '@/db';
+import type { ImajinEvent } from '@/lib/imajin';
 import type { SessionUser } from '@/lib/auth';
 
-interface EventWithParticipants extends Event {
+interface EventWithParticipants extends ImajinEvent {
   participants: Participant[];
 }
 
 export default function EventPage() {
   const params = useParams();
-  const slug = params.slug as string;
+  const eventId = params.eventId as string;
   const [event, setEvent] = useState<EventWithParticipants | null>(null);
+  const [signupMode, setSignupMode] = useState<'anyone' | 'attendees_only'>('anyone');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
@@ -23,7 +25,7 @@ export default function EventPage() {
 
   const fetchEvent = useCallback(async () => {
     try {
-      const res = await fetch(`/api/events/${slug}`);
+      const res = await fetch(`/api/events/${eventId}`);
       if (res.ok) {
         const data = await res.json();
         setEvent(data);
@@ -36,7 +38,7 @@ export default function EventPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [slug]);
+  }, [eventId]);
 
   useEffect(() => {
     fetchEvent();
@@ -44,6 +46,17 @@ export default function EventPage() {
     const interval = setInterval(fetchEvent, 3000);
     return () => clearInterval(interval);
   }, [fetchEvent]);
+
+  useEffect(() => {
+    fetch(`/api/events/${eventId}/config`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.signupMode) {
+          setSignupMode(data.signupMode);
+        }
+      })
+      .catch(() => {});
+  }, [eventId]);
 
   useEffect(() => {
     fetch('/api/auth/session')
@@ -89,9 +102,9 @@ export default function EventPage() {
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">🎤 {event.name}</h1>
-              {event.location && (
-                <p className="text-gray-400 text-sm">📍 {event.location}</p>
+              <h1 className="text-2xl font-bold">🎤 {event.title}</h1>
+              {event.venue && (
+                <p className="text-gray-400 text-sm">📍 {event.venue}</p>
               )}
             </div>
             <button
@@ -139,10 +152,11 @@ export default function EventPage() {
       {/* Signup form at bottom */}
       <div className="sticky bottom-0 max-w-2xl mx-auto w-full">
         <SignupForm
-          eventSlug={slug}
+          eventId={eventId}
           onSignup={fetchEvent}
           formRef={formRef}
           defaultName={sessionUser?.displayName}
+          signupMode={signupMode}
         />
       </div>
     </main>
