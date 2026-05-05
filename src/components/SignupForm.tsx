@@ -3,13 +3,13 @@
 import { useState, useRef, useEffect } from 'react';
 
 interface SignupFormProps {
-  eventSlug: string;
+  eventId: string;
   onSignup: () => void;
   formRef?: React.RefObject<HTMLFormElement>;
   defaultName?: string;
 }
 
-export function SignupForm({ eventSlug, onSignup, formRef, defaultName }: SignupFormProps) {
+export function SignupForm({ eventId, onSignup, formRef, defaultName }: SignupFormProps) {
   const [name, setName] = useState(defaultName ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -21,7 +21,7 @@ export function SignupForm({ eventSlug, onSignup, formRef, defaultName }: Signup
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(`/api/events/${eventSlug}/participants`, {
+      const res = await fetch(`/api/events/${eventId}/participants`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim() }),
@@ -31,7 +31,7 @@ export function SignupForm({ eventSlug, onSignup, formRef, defaultName }: Signup
         setName('');
         setShowSuccess(true);
         onSignup();
-        
+
         // Hide success after animation and scroll to top
         setTimeout(() => {
           setShowSuccess(false);

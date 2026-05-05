@@ -1,29 +1,26 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ParticipantRow } from '@/components/ParticipantRow';
-import { SignupForm } from '@/components/SignupForm';
-import type { Event, Participant } from '@/db';
-import type { SessionUser } from '@/lib/auth';
+import type { Participant } from '@/db';
+import type { ImajinEvent } from '@/lib/imajin';
 
-interface EventWithParticipants extends Event {
+interface EventWithParticipants extends ImajinEvent {
   participants: Participant[];
 }
 
-export default function EventPage() {
+export default function AdminPage() {
   const params = useParams();
-  const slug = params.slug as string;
+  const eventId = params.eventId as string;
   const [event, setEvent] = useState<EventWithParticipants | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
-  const formRef = useRef<HTMLFormElement>(null!);
 
   const fetchEvent = useCallback(async () => {
     try {
-      const res = await fetch(`/api/events/${slug}`);
+      const res = await fetch(`/api/events/${eventId}`);
       if (res.ok) {
         const data = await res.json();
         setEvent(data);
@@ -36,7 +33,7 @@ export default function EventPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [slug]);
+  }, [eventId]);
 
   useEffect(() => {
     fetchEvent();
@@ -45,15 +42,20 @@ export default function EventPage() {
     return () => clearInterval(interval);
   }, [fetchEvent]);
 
-  useEffect(() => {
-    fetch('/api/auth/session')
-      .then((r) => r.json())
-      .then((data) => setSessionUser(data))
-      .catch(() => {});
-  }, []);
+  const handleStatusChange = async (participantId: string, status: string) => {
+    try {
+      const res = await fetch(`/api/events/${eventId}/participants/${participantId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
 
-  const scrollToSignup = () => {
-    formRef.current?.scrollIntoView({ behavior: 'smooth' });
+      if (res.ok) {
+        fetchEvent(); // Refresh the list
+      }
+    } catch (err) {
+      console.error('Failed to update participant:', err);
+    }
   };
 
   if (isLoading) {
@@ -83,38 +85,50 @@ export default function EventPage() {
   );
 
   return (
-    <main className="min-h-screen bg-gray-900 text-white flex flex-col">
+    <main className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
       <header className="p-4 bg-gray-800 border-b border-gray-700">
         <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">🎤 {event.name}</h1>
-              {event.location && (
-                <p className="text-gray-400 text-sm">📍 {event.location}</p>
-              )}
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <Link href={`/${eventId}`} className="text-gray-400 hover:text-white">
+                ←
+              </Link>
+              <h1 className="text-xl font-bold">🎤 {event.title}</h1>
+              <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs rounded">
+                ADMIN
+              </span>
             </div>
-            <button
-              onClick={scrollToSignup}
-              className="px-4 py-2 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition-colors"
-            >
-              + Sign Up
-            </button>
           </div>
+          {event.venue && (
+            <p className="text-gray-400 text-sm ml-8">📍 {event.venue}</p>
+          )}
         </div>
       </header>
 
-      {/* Queue */}
-      <div className="flex-1 max-w-2xl mx-auto w-full">
+      {/* Queue with controls */}
+      <div className="max-w-2xl mx-auto">
+        <div className="p-4 bg-gray-800/50 border-b border-gray-700">
+          <p className="text-gray-400 text-sm">
+            {waitingParticipants.length} waiting • {doneParticipants.length} completed
+          </p>
+        </div>
+
         {waitingParticipants.length === 0 && doneParticipants.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            No one in the queue yet. Be the first to sign up!
+            No one in the queue yet.
           </div>
         ) : (
           <>
-            {/* Waiting queue */}
+            {/* Waiting queue with controls */}
             {waitingParticipants.map((p, i) => (
-              <ParticipantRow key={p.id} participant={p} position={i + 1} />
+              <ParticipantRow
+                key={p.id}
+                participant={p}
+                position={i + 1}
+                showControls
+                onStatusChange={handleStatusChange}
+              />
             ))}
 
             {/* Completed section */}
@@ -134,16 +148,6 @@ export default function EventPage() {
             )}
           </>
         )}
-      </div>
-
-      {/* Signup form at bottom */}
-      <div className="sticky bottom-0 max-w-2xl mx-auto w-full">
-        <SignupForm
-          eventSlug={slug}
-          onSignup={fetchEvent}
-          formRef={formRef}
-          defaultName={sessionUser?.displayName}
-        />
       </div>
     </main>
   );

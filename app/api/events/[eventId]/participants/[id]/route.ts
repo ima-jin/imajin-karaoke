@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, participants } from '@/db';
 import { eq } from 'drizzle-orm';
 
-// PATCH /api/events/[slug]/participants/[id] - Update participant status
+// PATCH /api/events/[eventId]/participants/[id] - Update participant status
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string; id: string }> }
+  { params }: { params: Promise<{ eventId: string; id: string }> }
 ) {
   try {
     const { id } = await params;
