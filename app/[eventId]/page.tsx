@@ -17,6 +17,7 @@ export default function EventPage() {
   const params = useParams();
   const eventId = params.eventId as string;
   const [event, setEvent] = useState<EventWithParticipants | null>(null);
+  const [signupMode, setSignupMode] = useState<'anyone' | 'attendees_only'>('anyone');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
@@ -45,6 +46,17 @@ export default function EventPage() {
     const interval = setInterval(fetchEvent, 3000);
     return () => clearInterval(interval);
   }, [fetchEvent]);
+
+  useEffect(() => {
+    fetch(`/api/events/${eventId}/config`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.signupMode) {
+          setSignupMode(data.signupMode);
+        }
+      })
+      .catch(() => {});
+  }, [eventId]);
 
   useEffect(() => {
     fetch('/api/auth/session')
@@ -144,6 +156,7 @@ export default function EventPage() {
           onSignup={fetchEvent}
           formRef={formRef}
           defaultName={sessionUser?.displayName}
+          signupMode={signupMode}
         />
       </div>
     </main>

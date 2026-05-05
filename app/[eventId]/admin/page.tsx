@@ -15,8 +15,10 @@ export default function AdminPage() {
   const params = useParams();
   const eventId = params.eventId as string;
   const [event, setEvent] = useState<EventWithParticipants | null>(null);
+  const [signupMode, setSignupMode] = useState<'anyone' | 'attendees_only'>('anyone');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isToggling, setIsToggling] = useState(false);
 
   const fetchEvent = useCallback(async () => {
     try {
@@ -35,12 +37,25 @@ export default function AdminPage() {
     }
   }, [eventId]);
 
+  const fetchConfig = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/events/${eventId}/config`);
+      if (res.ok) {
+        const data = await res.json();
+        setSignupMode(data.signupMode);
+      }
+    } catch (err) {
+      console.error('Failed to fetch config:', err);
+    }
+  }, [eventId]);
+
   useEffect(() => {
     fetchEvent();
+    fetchConfig();
     // Poll for updates every 3 seconds
     const interval = setInterval(fetchEvent, 3000);
     return () => clearInterval(interval);
-  }, [fetchEvent]);
+  }, [fetchEvent, fetchConfig]);
 
   const handleStatusChange = async (participantId: string, status: string) => {
     try {
@@ -98,7 +113,36 @@ export default function AdminPage() {
               <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs rounded">
                 ADMIN
               </span>
+              {signupMode === 'attendees_only' && (
+                <span className="px-2 py-1 bg-orange-500 text-white text-xs rounded font-semibold">
+                  ATTENDEES ONLY
+                </span>
+              )}
             </div>
+            <button
+              onClick={async () => {
+                setIsToggling(true);
+                const newMode = signupMode === 'anyone' ? 'attendees_only' : 'anyone';
+                try {
+                  const res = await fetch(`/api/events/${eventId}/config`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ signupMode: newMode }),
+                  });
+                  if (res.ok) {
+                    setSignupMode(newMode);
+                  }
+                } catch (err) {
+                  console.error('Failed to update config:', err);
+                } finally {
+                  setIsToggling(false);
+                }
+              }}
+              disabled={isToggling}
+              className="px-3 py-1.5 text-sm bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors disabled:opacity-50"
+            >
+              {isToggling ? '...' : signupMode === 'anyone' ? 'Mode: Anyone' : 'Mode: Attendees Only'}
+            </button>
           </div>
           {event.venue && (
             <p className="text-gray-400 text-sm ml-8">📍 {event.venue}</p>

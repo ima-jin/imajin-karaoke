@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, participants } from '@/db';
-import { eq, max } from 'drizzle-orm';
+import { db, participants, karaokeConfig } from '@/db';
+import { eq, max, and, or } from 'drizzle-orm';
+import { fetchEventAttendees } from '@/lib/imajin';
 
 // POST /api/events/[eventId]/participants - Sign up for event
 export async function POST(
@@ -10,13 +11,67 @@ export async function POST(
   try {
     const { eventId } = await params;
     const body = await request.json();
-    const { name, phone } = body;
+    const { name, phone, attendeeDid } = body;
 
-    if (!name || !name.trim()) {
-      return NextResponse.json(
-        { error: 'Name is required' },
-        { status: 400 }
-      );
+    // Check event config
+    const [config] = await db
+      .select()
+      .from(karaokeConfig)
+      .where(eq(karaokeConfig.imajinEventId, eventId));
+
+    const signupMode = config?.signupMode ?? 'anyone';
+    let participantName: string;
+    let participantDid: string | undefined;
+
+    if (signupMode === 'attendees_only') {
+      if (!attendeeDid) {
+        return NextResponse.json(
+          { error: 'attendeeDid is required for attendee-only events' },
+          { status: 400 }
+        );
+      }
+
+      // Fetch attendees from kernel and verify
+      const attendees = await fetchEventAttendees(eventId);
+      const attendee = attendees.find((a) => a.did === attendeeDid);
+
+      if (!attendee) {
+        return NextResponse.json(
+          { error: 'Attendee not found for this event' },
+          { status: 403 }
+        );
+      }
+
+      participantName = attendee.displayName;
+      participantDid = attendee.did;
+
+      // Check for duplicate: this DID already has a waiting/active entry
+      const [existing] = await db
+        .select()
+        .from(participants)
+        .where(
+          and(
+            eq(participants.imajinEventId, eventId),
+            eq(participants.participantDid, participantDid),
+            or(eq(participants.status, 'waiting'), eq(participants.status, 'active'))
+          )
+        );
+
+      if (existing) {
+        return NextResponse.json(
+          { error: 'You are already signed up for this event' },
+          { status: 409 }
+        );
+      }
+    } else {
+      // Anyone mode: name from body
+      if (!name || !name.trim()) {
+        return NextResponse.json(
+          { error: 'Name is required' },
+          { status: 400 }
+        );
+      }
+      participantName = name.trim();
     }
 
     // Get the next position
@@ -32,7 +87,8 @@ export async function POST(
       .insert(participants)
       .values({
         imajinEventId: eventId,
-        name: name.trim(),
+        name: participantName,
+        participantDid: participantDid || null,
         position: nextPosition,
         status: 'waiting',
         phone: phone || null,

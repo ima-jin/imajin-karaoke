@@ -8,6 +8,14 @@ export interface ImajinEvent {
   creatorDid: string;
 }
 
+export interface ImajinAttendee {
+  did: string;
+  displayName: string;
+  handle?: string;
+  avatar?: string;
+  ticketId?: string;
+}
+
 function getHeaders(): Record<string, string> {
   const appDid = process.env.IMAJIN_APP_DID;
   const attestationId = process.env.IMAJIN_APP_ATTESTATION_ID;
@@ -60,6 +68,60 @@ export async function fetchImajinEvent(eventId: string): Promise<ImajinEvent | n
   }
 
   return res.json();
+}
+
+export async function fetchEventAttendees(eventId: string): Promise<ImajinAttendee[]> {
+  const eventsUrl = process.env.IMAJIN_EVENTS_URL;
+  if (!eventsUrl) {
+    console.error('IMAJIN_EVENTS_URL is not set');
+    return [];
+  }
+
+  const res = await fetch(`${eventsUrl}/api/events/${eventId}/guests`, {
+    headers: getHeaders(),
+  });
+
+  if (!res.ok) {
+    console.error('Failed to fetch event attendees:', res.status, await res.text());
+    return [];
+  }
+
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+export async function createPerformanceAttestation(
+  singerDid: string,
+  eventId: string,
+  eventTitle: string
+): Promise<void> {
+  const authUrl = process.env.IMAJIN_AUTH_URL;
+  if (!authUrl) {
+    console.error('IMAJIN_AUTH_URL is not set');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${authUrl}/auth/api/attestations`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        type: 'karaoke.performance',
+        subjectDid: singerDid,
+        payload: {
+          eventId,
+          eventTitle,
+          completedAt: new Date().toISOString(),
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      console.error('Failed to create performance attestation:', res.status, await res.text());
+    }
+  } catch (error) {
+    console.error('Error creating performance attestation:', error);
+  }
 }
 
 export async function checkTicketAccess(eventId: string, userDid: string): Promise<boolean> {

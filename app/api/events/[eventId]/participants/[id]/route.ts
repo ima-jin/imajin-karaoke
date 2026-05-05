@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, participants } from '@/db';
 import { eq } from 'drizzle-orm';
+import { createPerformanceAttestation, fetchImajinEvent } from '@/lib/imajin';
 
 // PATCH /api/events/[eventId]/participants/[id] - Update participant status
 export async function PATCH(
@@ -8,7 +9,7 @@ export async function PATCH(
   { params }: { params: Promise<{ eventId: string; id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { eventId, id } = await params;
     const body = await request.json();
     const { status } = body;
 
@@ -48,6 +49,21 @@ export async function PATCH(
       .set(updateData)
       .where(eq(participants.id, id))
       .returning();
+
+    // Fire and forget performance attestation on completion
+    if (status === 'complete' && updatedParticipant.participantDid) {
+      fetchImajinEvent(eventId).then((event) => {
+        if (event) {
+          createPerformanceAttestation(
+            updatedParticipant.participantDid!,
+            eventId,
+            event.title
+          );
+        }
+      }).catch((err) => {
+        console.error('Failed to create performance attestation:', err);
+      });
+    }
 
     return NextResponse.json(updatedParticipant);
   } catch (error) {
