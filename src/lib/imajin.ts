@@ -57,7 +57,8 @@ export async function fetchImajinEvents(): Promise<ImajinEvent[]> {
   }
 
   const data = await res.json();
-  return Array.isArray(data) ? data : [];
+  // Events API returns { events: [...] }, not a bare array
+  return Array.isArray(data) ? data : data.events ?? [];
 }
 
 export async function fetchImajinEvent(eventId: string): Promise<ImajinEvent | null> {
@@ -97,7 +98,7 @@ export async function fetchEventAttendees(eventId: string): Promise<ImajinAttend
   }
 
   const data = await res.json();
-  return Array.isArray(data) ? data : [];
+  return Array.isArray(data) ? data : data.attendees ?? data.guests ?? [];
 }
 
 export async function createPerformanceAttestation(
