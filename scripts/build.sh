@@ -5,7 +5,6 @@
 # Defaults to auto-detect from cwd (~/prod → prod, else dev).
 
 set -e
-export NODE_ENV=production
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
@@ -45,15 +44,16 @@ git pull --ff-only || { echo "❌ git pull failed"; exit 1; }
 
 # Install deps from monorepo root (karaoke is a pnpm workspace member via
 # imajin-ai/pnpm-workspace.yaml and depends on @imajin/db@workspace:*)
+# --ignore-scripts avoids husky/prepare failures in CI/deploy contexts
 echo "Installing dependencies (from monorepo root)..."
 cd "$MONOREPO_ROOT"
-pnpm install --frozen-lockfile || pnpm install
+pnpm install --frozen-lockfile --ignore-scripts || pnpm install --ignore-scripts
 cd "$REPO_ROOT"
 
 # Build
 echo "Building..."
 rm -rf .next
-npx next build || { echo "❌ Build failed"; exit 1; }
+NODE_ENV=production npx next build || { echo "❌ Build failed"; exit 1; }
 
 # Restart
 echo "Restarting $PM2_NAME..."
