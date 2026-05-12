@@ -8,6 +8,7 @@ export interface ImajinEvent {
   endsAt?: string;
   status: string;
   creatorDid: string;
+  hasKaraokeConfig?: boolean;
 }
 
 export interface ImajinAttendee {

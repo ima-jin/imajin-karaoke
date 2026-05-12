@@ -3,6 +3,39 @@ import { db, karaokeConfig } from '@/db';
 import { eq } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
 
+// POST /api/events/[eventId]/config - Create karaoke config for event
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ eventId: string }> }
+) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { eventId } = await params;
+
+    const [config] = await db
+      .insert(karaokeConfig)
+      .values({
+        imajinEventId: eventId,
+        signupMode: 'anyone',
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: karaokeConfig.imajinEventId,
+        set: { updatedAt: new Date() },
+      })
+      .returning();
+
+    return NextResponse.json({ signupMode: config.signupMode });
+  } catch (error) {
+    console.error('Error creating config:', error);
+    return NextResponse.json({ error: 'Failed to create config' }, { status: 500 });
+  }
+}
+
 // GET /api/events/[eventId]/config - Get karaoke config for event
 export async function GET(
   request: NextRequest,
