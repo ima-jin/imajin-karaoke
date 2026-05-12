@@ -26,7 +26,7 @@ export function ImajinAuth() {
   }
 
   if (!user) {
-    const signInUrl = `${authUrl}/auth/authorize?app_id=${appId}&scopes=profile:read`;
+    const signInUrl = `${authUrl}/auth/authorize?app_id=${appId}&scopes=profile:read,events:read`;
     return (
       <a
         href={signInUrl}

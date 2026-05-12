@@ -1,3 +1,5 @@
+import { getSession } from '@/lib/auth';
+
 export interface ImajinEvent {
   id: string;
   title: string;
@@ -16,9 +18,17 @@ export interface ImajinAttendee {
   ticketId?: string;
 }
 
-function getHeaders(): Record<string, string> {
+/**
+ * Build headers for kernel API calls.
+ * Uses the session's attestation ID (per-user consent) when available,
+ * falls back to env var for service-level calls.
+ */
+async function getHeaders(): Promise<Record<string, string>> {
   const appDid = process.env.IMAJIN_APP_DID;
-  const attestationId = process.env.IMAJIN_APP_ATTESTATION_ID;
+
+  // Try session attestation first (per-user), fall back to env var (service-level)
+  const session = await getSession().catch(() => null);
+  const attestationId = session?.attestationId ?? process.env.IMAJIN_APP_ATTESTATION_ID;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -38,7 +48,7 @@ export async function fetchImajinEvents(): Promise<ImajinEvent[]> {
   }
 
   const res = await fetch(`${eventsUrl}/api/events`, {
-    headers: getHeaders(),
+    headers: await getHeaders(),
   });
 
   if (!res.ok) {
@@ -58,7 +68,7 @@ export async function fetchImajinEvent(eventId: string): Promise<ImajinEvent | n
   }
 
   const res = await fetch(`${eventsUrl}/api/events/${eventId}`, {
-    headers: getHeaders(),
+    headers: await getHeaders(),
   });
 
   if (!res.ok) {
@@ -78,7 +88,7 @@ export async function fetchEventAttendees(eventId: string): Promise<ImajinAttend
   }
 
   const res = await fetch(`${eventsUrl}/api/events/${eventId}/guests`, {
-    headers: getHeaders(),
+    headers: await getHeaders(),
   });
 
   if (!res.ok) {
@@ -104,7 +114,7 @@ export async function createPerformanceAttestation(
   try {
     const res = await fetch(`${authUrl}/auth/api/attestations`, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: await getHeaders(),
       body: JSON.stringify({
         type: 'karaoke.performance',
         subjectDid: singerDid,
@@ -132,7 +142,7 @@ export async function checkTicketAccess(eventId: string, userDid: string): Promi
   }
 
   const res = await fetch(`${eventsUrl}/api/events/${eventId}/tickets?did=${encodeURIComponent(userDid)}`, {
-    headers: getHeaders(),
+    headers: await getHeaders(),
   });
 
   if (!res.ok) {
