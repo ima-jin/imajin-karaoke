@@ -58,11 +58,17 @@ export async function GET(req: NextRequest) {
     return redirectTo('/?auth_error=network_error', req);
   }
 
+  // Resolve relative avatar URLs against the kernel
+  let avatar = profileData.avatar;
+  if (avatar && avatar.startsWith('/')) {
+    avatar = `${authUrl}${avatar}`;
+  }
+
   const token = await createSessionToken({
     did: profileData.did,
     displayName: profileData.displayName ?? profileData.handle ?? profileData.did,
     handle: profileData.handle ?? profileData.did,
-    avatar: profileData.avatar,
+    avatar,
     attestationId,
   });
 

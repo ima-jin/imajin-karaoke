@@ -59,7 +59,7 @@ export function ImajinAuth() {
             {user.displayName}
           </span>
           {user.handle && user.handle !== user.did && (
-            <span className="text-[11px] text-amber-400/80">@{user.handle.replace(/^@/, '')}</span>
+            <span className="text-[11px] text-amber-400">@{user.handle.replace(/^@/, '')}</span>
           )}
         </div>
       </div>
