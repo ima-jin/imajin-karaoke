@@ -53,7 +53,7 @@ cd "$REPO_ROOT"
 # Build
 echo "Building..."
 rm -rf .next
-NODE_ENV=production npx next build || { echo "❌ Build failed"; exit 1; }
+npx next build || { echo "❌ Build failed"; exit 1; }
 
 # Restart
 echo "Restarting $PM2_NAME..."
