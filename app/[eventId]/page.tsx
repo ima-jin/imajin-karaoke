@@ -250,6 +250,7 @@ export default function EventPage() {
           formRef={formRef}
           defaultName={sessionUser?.displayName}
           signupMode={signupMode}
+          participants={event.participants}
         />
       </div>
     </main>

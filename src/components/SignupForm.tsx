@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import type { Participant } from '@/db';
 
 interface Attendee {
   did: string;
@@ -15,12 +16,14 @@ interface SignupFormProps {
   formRef?: React.RefObject<HTMLFormElement>;
   defaultName?: string;
   signupMode?: 'anyone' | 'attendees_only';
+  participants?: Participant[];
 }
 
-export function SignupForm({ eventId, onSignup, formRef, defaultName, signupMode = 'anyone' }: SignupFormProps) {
+export function SignupForm({ eventId, onSignup, formRef, defaultName, signupMode = 'anyone', participants = [] }: SignupFormProps) {
   const [name, setName] = useState(defaultName ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [duplicateError, setDuplicateError] = useState('');
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [filteredAttendees, setFilteredAttendees] = useState<Attendee[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,10 +84,21 @@ export function SignupForm({ eventId, onSignup, formRef, defaultName, signupMode
 
     if (signupMode === 'attendees_only') {
       if (!selectedAttendee) return;
+      // Check for duplicate signup
+      const alreadySignedUp = participants.some(
+        (p) => p.participantDid === selectedAttendee.did &&
+          (p.status === 'waiting' || p.status === 'active')
+      );
+      if (alreadySignedUp) {
+        setDuplicateError(`${selectedAttendee.displayName} is already in the queue`);
+        setIsSubmitting(false);
+        return;
+      }
     } else {
       if (!name.trim()) return;
     }
 
+    setDuplicateError('');
     setIsSubmitting(true);
     try {
       const body =
@@ -119,6 +133,7 @@ export function SignupForm({ eventId, onSignup, formRef, defaultName, signupMode
   };
 
   const handleSelectAttendee = (attendee: Attendee) => {
+    setDuplicateError('');
     setSelectedAttendee(attendee);
     setSearchQuery(attendee.displayName);
     setShowDropdown(false);
@@ -150,6 +165,11 @@ export function SignupForm({ eventId, onSignup, formRef, defaultName, signupMode
         </div>
       ) : signupMode === 'attendees_only' ? (
         <div className="space-y-3">
+          {duplicateError && (
+            <div className="px-4 py-2 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+              {duplicateError}
+            </div>
+          )}
           {selectedAttendee ? (
             <div className="flex items-center justify-between bg-gray-900 px-4 py-3 rounded-lg border border-orange-500">
               <div>
@@ -163,6 +183,7 @@ export function SignupForm({ eventId, onSignup, formRef, defaultName, signupMode
                 onClick={() => {
                   setSelectedAttendee(null);
                   setSearchQuery('');
+                  setDuplicateError('');
                 }}
                 className="text-gray-400 hover:text-white text-sm"
               >
@@ -175,7 +196,10 @@ export function SignupForm({ eventId, onSignup, formRef, defaultName, signupMode
                 ref={inputRef}
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setDuplicateError('');
+                }}
                 placeholder="Search attendees..."
                 className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
                 disabled={isSubmitting}

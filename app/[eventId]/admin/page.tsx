@@ -119,30 +119,49 @@ export default function AdminPage() {
                 </span>
               )}
             </div>
-            <button
-              onClick={async () => {
-                setIsToggling(true);
-                const newMode = signupMode === 'anyone' ? 'attendees_only' : 'anyone';
-                try {
-                  const res = await fetch(`/api/events/${eventId}/config`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ signupMode: newMode }),
-                  });
-                  if (res.ok) {
-                    setSignupMode(newMode);
+            {/* Toggle Switch */}
+            <div className="flex items-center gap-3">
+              <span className={`text-xs font-medium ${signupMode === 'anyone' ? 'text-orange-400' : 'text-gray-500'}`}>
+                Anyone
+              </span>
+              <button
+                onClick={async () => {
+                  if (isToggling) return;
+                  setIsToggling(true);
+                  const newMode = signupMode === 'anyone' ? 'attendees_only' : 'anyone';
+                  try {
+                    const res = await fetch(`/api/events/${eventId}/config`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ signupMode: newMode }),
+                    });
+                    if (res.ok) {
+                      setSignupMode(newMode);
+                    }
+                  } catch (err) {
+                    console.error('Failed to update config:', err);
+                  } finally {
+                    setIsToggling(false);
                   }
-                } catch (err) {
-                  console.error('Failed to update config:', err);
-                } finally {
-                  setIsToggling(false);
-                }
-              }}
-              disabled={isToggling}
-              className="px-3 py-1.5 text-sm bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors disabled:opacity-50"
-            >
-              {isToggling ? '...' : signupMode === 'anyone' ? 'Mode: Anyone' : 'Mode: Attendees Only'}
-            </button>
+                }}
+                disabled={isToggling}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-gray-800 ${
+                  signupMode === 'attendees_only' ? 'bg-orange-500' : 'bg-gray-600'
+                } disabled:opacity-50`}
+                role="switch"
+                aria-checked={signupMode === 'attendees_only'}
+                aria-label="Toggle attendee-only signup mode"
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    signupMode === 'attendees_only' ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className={`text-xs font-medium ${signupMode === 'attendees_only' ? 'text-orange-400' : 'text-gray-500'}`}>
+                Attendees Only
+              </span>
+            </div>
           </div>
           {event.venue && (
             <p className="text-gray-400 text-sm ml-8">📍 {event.venue}</p>
