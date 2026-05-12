@@ -30,9 +30,11 @@ fi
 if [ "$ENV" = "prod" ]; then
   PM2_NAME="prod-karaoke"
   LABEL="PROD"
+  MONOREPO_ROOT="$HOME/prod/imajin-ai"
 else
   PM2_NAME="dev-karaoke"
   LABEL="DEV"
+  MONOREPO_ROOT="$HOME/dev/imajin-ai"
 fi
 
 echo "=== [$LABEL] Karaoke build started: $(date) ==="
@@ -41,9 +43,12 @@ echo "=== [$LABEL] Karaoke build started: $(date) ==="
 echo "Pulling latest..."
 git pull --ff-only || { echo "❌ git pull failed"; exit 1; }
 
-# Install deps
-echo "Installing dependencies..."
+# Install deps from monorepo root (karaoke is a pnpm workspace member via
+# imajin-ai/pnpm-workspace.yaml and depends on @imajin/db@workspace:*)
+echo "Installing dependencies (from monorepo root)..."
+cd "$MONOREPO_ROOT"
 pnpm install --frozen-lockfile || pnpm install
+cd "$REPO_ROOT"
 
 # Build
 echo "Building..."
