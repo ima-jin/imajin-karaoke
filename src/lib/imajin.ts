@@ -84,7 +84,9 @@ export async function fetchImajinEvent(eventId: string): Promise<ImajinEvent | n
     return null;
   }
 
-  return res.json();
+  const data = await res.json();
+  // Kernel returns { event: {...}, ticketTypes: [...] } — unwrap
+  return data.event ?? data;
 }
 
 export async function fetchEventAttendees(eventId: string): Promise<ImajinAttendee[]> {

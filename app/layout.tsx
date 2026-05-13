@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import './globals.css';
 import { ImajinAuth } from '@/components/ImajinAuth';
+
+const IMAJIN_URL = process.env.NEXT_PUBLIC_IMAJIN_AUTH_URL || 'https://jin.imajin.ai';
 
 export const metadata: Metadata = {
   title: 'Karaoke | Imajin',
@@ -17,9 +20,9 @@ export default function RootLayout({
       <body>
         <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-2 bg-gray-950/90 backdrop-blur border-b border-gray-800/50">
           <div className="flex items-center gap-2 text-sm text-gray-400">
-            <span className="font-semibold text-white">🎤 Karaoke</span>
+            <Link href="/" className="font-semibold text-white hover:text-amber-400 transition-colors">🎤 Karaoke</Link>
             <span className="text-gray-600">on</span>
-            <span className="text-amber-500/80 font-medium">Imajin</span>
+            <a href={IMAJIN_URL} className="text-amber-500/80 font-medium hover:text-amber-400 transition-colors">Imajin</a>
           </div>
           <ImajinAuth />
         </header>
