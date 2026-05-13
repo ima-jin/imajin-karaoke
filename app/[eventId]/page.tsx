@@ -78,9 +78,10 @@ export default function EventPage() {
         return;
       }
 
-      // Creator always goes to admin
+      // Creator sees the same attendee view but with a manage banner
       if (sessionData?.did === eventData.creatorDid) {
-        router.replace(`/${eventId}/admin`);
+        setAccessState({ type: 'creator' });
+        setIsLoading(false);
         return;
       }
 
@@ -125,7 +126,7 @@ export default function EventPage() {
 
   // Poll for queue updates (only when access is granted)
   useEffect(() => {
-    if (accessState.type !== 'allowed' && accessState.type !== 'anonymous_allowed') {
+    if (accessState.type !== 'allowed' && accessState.type !== 'anonymous_allowed' && accessState.type !== 'creator') {
       return;
     }
 
@@ -190,6 +191,21 @@ export default function EventPage() {
 
   return (
     <main className="min-h-screen bg-gray-900 text-white flex flex-col">
+      {/* Creator banner */}
+      {accessState.type === 'creator' && (
+        <div className="bg-orange-500/10 border-b border-orange-500/30 px-4 py-2">
+          <div className="max-w-2xl mx-auto flex items-center justify-between">
+            <span className="text-xs text-orange-400">You're the organizer — this is how attendees see it</span>
+            <Link
+              href={`/${eventId}/admin`}
+              className="text-xs font-medium text-orange-500 hover:text-orange-400 transition-colors"
+            >
+              Manage Karaoke →
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="p-4 bg-gray-800 border-b border-gray-700">
         <div className="max-w-2xl mx-auto">
