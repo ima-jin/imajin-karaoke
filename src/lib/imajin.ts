@@ -35,8 +35,13 @@ async function getHeaders(): Promise<Record<string, string>> {
     'Content-Type': 'application/json',
   };
 
-  if (appDid) headers['X-App-DID'] = appDid;
-  if (attestationId) headers['X-App-Authorization'] = attestationId;
+  // Only send app auth headers when we have BOTH — sending X-App-DID
+  // without X-App-Authorization triggers a 401 instead of falling
+  // through to the unauthenticated path (which works for public data).
+  if (appDid && attestationId) {
+    headers['X-App-DID'] = appDid;
+    headers['X-App-Authorization'] = attestationId;
+  }
 
   return headers;
 }
