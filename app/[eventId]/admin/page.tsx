@@ -16,9 +16,11 @@ export default function AdminPage() {
   const eventId = params.eventId as string;
   const [event, setEvent] = useState<EventWithParticipants | null>(null);
   const [signupMode, setSignupMode] = useState<'anyone' | 'attendees_only'>('anyone');
+  const [discoverable, setDiscoverable] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isToggling, setIsToggling] = useState(false);
+  const [isTogglingMode, setIsTogglingMode] = useState(false);
+  const [isTogglingDiscoverable, setIsTogglingDiscoverable] = useState(false);
 
   const fetchEvent = useCallback(async () => {
     try {
@@ -43,6 +45,7 @@ export default function AdminPage() {
       if (res.ok) {
         const data = await res.json();
         setSignupMode(data.signupMode);
+        setDiscoverable(data.discoverable ?? false);
       }
     } catch (err) {
       console.error('Failed to fetch config:', err);
@@ -119,48 +122,92 @@ export default function AdminPage() {
                 </span>
               )}
             </div>
-            {/* Toggle Switch */}
-            <div className="flex items-center gap-3">
-              <span className={`text-xs font-medium ${signupMode === 'anyone' ? 'text-orange-400' : 'text-gray-500'}`}>
-                Anyone
-              </span>
-              <button
-                onClick={async () => {
-                  if (isToggling) return;
-                  setIsToggling(true);
-                  const newMode = signupMode === 'anyone' ? 'attendees_only' : 'anyone';
-                  try {
-                    const res = await fetch(`/api/events/${eventId}/config`, {
-                      method: 'PATCH',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ signupMode: newMode }),
-                    });
-                    if (res.ok) {
-                      setSignupMode(newMode);
+            {/* Toggle Switches */}
+            <div className="flex items-center gap-6">
+              {/* Discoverable Toggle */}
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-medium ${discoverable ? 'text-orange-400' : 'text-gray-500'}`}>
+                  List on Karaoke
+                </span>
+                <button
+                  onClick={async () => {
+                    if (isTogglingDiscoverable) return;
+                    setIsTogglingDiscoverable(true);
+                    const newVal = !discoverable;
+                    try {
+                      const res = await fetch(`/api/events/${eventId}/config`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ discoverable: newVal }),
+                      });
+                      if (res.ok) {
+                        setDiscoverable(newVal);
+                      }
+                    } catch (err) {
+                      console.error('Failed to update discoverable:', err);
+                    } finally {
+                      setIsTogglingDiscoverable(false);
                     }
-                  } catch (err) {
-                    console.error('Failed to update config:', err);
-                  } finally {
-                    setIsToggling(false);
-                  }
-                }}
-                disabled={isToggling}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-gray-800 ${
-                  signupMode === 'attendees_only' ? 'bg-orange-500' : 'bg-gray-600'
-                } disabled:opacity-50`}
-                role="switch"
-                aria-checked={signupMode === 'attendees_only'}
-                aria-label="Toggle attendee-only signup mode"
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    signupMode === 'attendees_only' ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-              <span className={`text-xs font-medium ${signupMode === 'attendees_only' ? 'text-orange-400' : 'text-gray-500'}`}>
-                Attendees Only
-              </span>
+                  }}
+                  disabled={isTogglingDiscoverable}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-gray-800 ${
+                    discoverable ? 'bg-orange-500' : 'bg-gray-600'
+                  } disabled:opacity-50`}
+                  role="switch"
+                  aria-checked={discoverable}
+                  aria-label="Toggle list on karaoke discovery"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      discoverable ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Signup Mode Toggle */}
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-medium ${signupMode === 'anyone' ? 'text-orange-400' : 'text-gray-500'}`}>
+                  Anyone
+                </span>
+                <button
+                  onClick={async () => {
+                    if (isTogglingMode) return;
+                    setIsTogglingMode(true);
+                    const newMode = signupMode === 'anyone' ? 'attendees_only' : 'anyone';
+                    try {
+                      const res = await fetch(`/api/events/${eventId}/config`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ signupMode: newMode }),
+                      });
+                      if (res.ok) {
+                        setSignupMode(newMode);
+                      }
+                    } catch (err) {
+                      console.error('Failed to update config:', err);
+                    } finally {
+                      setIsTogglingMode(false);
+                    }
+                  }}
+                  disabled={isTogglingMode}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-gray-800 ${
+                    signupMode === 'attendees_only' ? 'bg-orange-500' : 'bg-gray-600'
+                  } disabled:opacity-50`}
+                  role="switch"
+                  aria-checked={signupMode === 'attendees_only'}
+                  aria-label="Toggle attendee-only signup mode"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      signupMode === 'attendees_only' ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className={`text-xs font-medium ${signupMode === 'attendees_only' ? 'text-orange-400' : 'text-gray-500'}`}>
+                  Attendees Only
+                </span>
+              </div>
             </div>
           </div>
           {event.venue && (

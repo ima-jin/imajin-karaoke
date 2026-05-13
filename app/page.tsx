@@ -98,8 +98,24 @@ function EventCard({
 export default function Home() {
   const [myEvents, setMyEvents] = useState<EventWithConfig[]>([]);
   const [attendingEvents, setAttendingEvents] = useState<ImajinEvent[]>([]);
+  const [discoverableEvents, setDiscoverableEvents] = useState<ImajinEvent[]>([]);
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingDiscoverable, setIsLoadingDiscoverable] = useState(true);
+
+  const fetchDiscoverable = useCallback(async () => {
+    try {
+      const res = await fetch('/api/events/discoverable');
+      if (res.ok) {
+        const data = await res.json();
+        setDiscoverableEvents(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch discoverable events:', error);
+    } finally {
+      setIsLoadingDiscoverable(false);
+    }
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -134,7 +150,8 @@ export default function Home() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchDiscoverable();
+  }, [fetchData, fetchDiscoverable]);
 
   return (
     <main className="min-h-screen bg-gray-900 text-white">
@@ -144,6 +161,27 @@ export default function Home() {
             🎤 <span className="text-orange-500">Karaoke</span>
           </h1>
         </div>
+
+        {/* Live Karaoke — visible without signing in */}
+        {!isLoadingDiscoverable && discoverableEvents.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-lg font-semibold text-gray-300 mb-4 flex items-center gap-2">
+              <span>🎤 Live Karaoke</span>
+              <span className="text-sm text-gray-500 font-normal">
+                ({discoverableEvents.length})
+              </span>
+            </h2>
+            <div className="space-y-4">
+              {discoverableEvents.map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  action="join"
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {isLoading ? (
           <div className="text-center text-gray-500 py-12">Loading events...</div>

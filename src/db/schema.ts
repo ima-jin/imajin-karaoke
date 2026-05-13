@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, integer } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, integer, boolean } from 'drizzle-orm/pg-core';
 
 export const participants = pgTable('participants', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -16,6 +16,7 @@ export const participants = pgTable('participants', {
 export const karaokeConfig = pgTable('karaoke_config', {
   imajinEventId: varchar('imajin_event_id', { length: 255 }).primaryKey(),
   signupMode: varchar('signup_mode', { length: 20 }).default('anyone').notNull(), // 'anyone' | 'attendees_only'
+  discoverable: boolean('discoverable').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
