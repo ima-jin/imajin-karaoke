@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // transpilePackages: ['@imajin/ui', '@imajin/db'], // Disabled for standalone microsite
+  transpilePackages: ['@imajin/db'], // @imajin/db ships raw TS via file: dep; Next must transpile it
   images: {
     remotePatterns: [
       {
