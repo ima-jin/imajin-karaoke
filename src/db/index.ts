@@ -1,4 +1,4 @@
-import { createDb } from "@imajin/db";
+import { createDb } from "@ima-jin/db";
 import * as schema from "./schema";
 
 export const db = createDb(schema);
